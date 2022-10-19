@@ -30,8 +30,10 @@ resource "aws_ecs_task_definition" "first-task" {
   container_definitions = jsonencode([
     {
       name      = "first"
-      image     = "${aws_ecr_repository.hello-world.repository_url}",
+      image     = "${aws_ecr_repository.hello-world.repository_url}:New",
       essential = true
+      cpu = 1024
+      memory = 2048
       portMappings = [
         { 
           protocol = "tcp"
@@ -99,14 +101,33 @@ data "aws_iam_policy_document" "assume_role_policy"{
 
 resource "aws_ecs_service" "hello-world" {
   name                = "hello-world"
-  cluster             = aws_ecs_cluster.hello-world-cl.id
+  cluster        = aws_ecs_cluster.hello-world-cl.id
   task_definition     = aws_ecs_task_definition.first-task.arn
   launch_type = "FARGATE"
-  desired_count = 2
+  desired_count = 1
 
   network_configuration {
-    subnets= ["${aws_default_subnet.default_subnet_a.id}", "${aws_default_subnet.default_subnet_b.id}"]
+    security_groups =  ["${aws_default_security_group.default.id}"]
+    subnets= ["${aws_default_subnet.default_subnet_a.id}", "${aws_default_subnet.default_subnet_b.id}","${aws_default_subnet.default_subnet_c.id}"]
     assign_public_ip = true 
+  }
+}
+
+resource "aws_default_security_group" "default" {
+  vpc_id = "vpc-03e7ba2c2d4601f5b"
+
+  ingress {
+    protocol  = -1
+    self      = true
+    from_port = 0
+    to_port   = 0
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
@@ -123,4 +144,8 @@ resource "aws_default_subnet" "default_subnet_b" {
   availability_zone = "eu-west-2b"
   
 }
- 
+
+resource "aws_default_subnet" "default_subnet_c" {
+  availability_zone = "eu-west-2c"
+
+} 
